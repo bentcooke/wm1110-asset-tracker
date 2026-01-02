@@ -1,6 +1,13 @@
 # Sidewalk Asset Tracker Payload Specifications
 
-This document describes the uplink and downlink message payloads used by the asset tracker.  The payload sizes have been restricted to a maximum of 19 bytes which is the maximum payload size available for the CSS/LoRA PHY type on the Amazon Sidewalk network.  
+This document describes the uplink and downlink message payloads used by the asset tracker.
+
+**Updated for AWS IoT Core Device Location Integration:**
+- Removed manual fragmentation logic - AWS IoT Core Device Location service handles larger payloads natively
+- Payload sizes can now exceed the previous 19-byte limit (up to 255 bytes)
+- WiFi payloads can include up to 32 access points in a single message
+- GNSS payloads include complete NAV message data without fragmentation
+- Simplified message structure for better cloud integration  
 
 ## Uplink Message Types
 
@@ -52,47 +59,39 @@ Description:
 ### WIFI Location Uplink Message Format
 |      |       |       |       |       |       | 
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Name** | Type | Reserved | Temp & Humidity | Motion State & Max Accel | WiFi Location Data |
-| **Position** | 0x20 | Byte 2 | Byte 3 | Byte 4 | Bytes 5 - 18 |
+| **Name** | Type | Battery | Temp & Humidity | Motion State & Max Accel | WiFi AP Count | WiFi Location Data |
+| **Position** | 0x80 | Byte 1 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | Bytes 6+ |
 
 Description:
 | Byte Offset | Name | Data Type | Description |
 | :--: | :--  | :-------: | :---------- |
-| 0 | Type | uint_8 | WIFI message type<br> bit 7-6: TYPE = 2 (WIFI)<br>bit 5-3: total fragments<br> bit 2-0: current fragment<br>  *ex. 0x20 = WIFI type * |
-| 1 | Reserved | uint_8 | Reserved |
+| 0 | Type | uint_8 | WIFI message type<br> bit 7-6: TYPE = 2 (WIFI)<br>bit 5-0: Reserved<br>  *ex. 0x80 = WIFI type * |
+| 1 | Battery | uint_8 | Battery level percentage |
 | 2 | Temp & Humidity | uint_8 | bit 7-4: Temperature (C)<br>bit 3-0: Relative Humidity (%) <br> *ex. TBD* |
 | 3 | Motion State & Max Accel | uint_8 | bit 7: Motion state<br>bit 6-0: Max accelleration since last record <br> *ex. TBD* |
-| 5-19 | WiFi Location Data | | byte 5: RSSI 1<br>byte 6-11: MAC 1<br>byte 12: RSSI 2<br>byte 13-18: MAC 2 |
+| 4 | WiFi AP Count | uint_8 | Number of WiFi access points included (N) |
+| 5+ | WiFi Location Data | N * 7 bytes | For each AP: 1 byte RSSI + 6 bytes MAC address<br>Repeated N times for all detected APs (up to 32) |
 
-|      |       |       |  
-| :--- | :---: | :---: | 
-| **Name** | Type / Seq>0 | GNSS Location Data |
-| **Position** | 0x3X | Bytes 2 - 19 |
+**Note:** Manual fragmentation removed. AWS IoT Core Device Location service accepts complete WiFi scan data in a single message.
 
 ### GNSS Location Uplink Message Format
 |      |       |       |       |       |       |       |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Name** | Type & Seq=0 | Battery | Temp & Humidity | Motion State & Max Accel | GNSS Data Size | Capture Time |
-| **Position** | 0x30 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | Bytes 5-8  |
+| **Name** | Type | Battery | Temp & Humidity | Motion State & Max Accel | GNSS Data Size | Capture Time | NAV Message Data |
+| **Position** | 0xC0 | Byte 1 | Byte 2 | Byte 3 | Byte 4 | Byte 5 | Bytes 6-9  | Bytes 10+ |
 
 Description:
 | Byte Offset | Name | Data Type | Description |
 | :--: | :--  | :-------: | :---------- |
-| 0 | Type | uint_8 | GNSS message type<br> bit 7-6: TYPE = 3 (GNSS)<br>bit 5-0: Sequence number <br> *ex. 0x30 = GNSS seq start * |
-| 1 | Reserved | uint_8 | Reserved |
+| 0 | Type | uint_8 | GNSS message type<br> bit 7-6: TYPE = 3 (GNSS)<br>bit 5-0: Reserved <br> *ex. 0xC0 = GNSS type * |
+| 1 | Battery | uint_8 | Battery level percentage |
 | 2 | Temp & Humidity | uint_8 | bit 7-4: Temperature (C)<br>bit 3-0: Relative Humidity (%) <br> *ex. TBD* |
 | 3 | Motion State & Max Accel | uint_8 | bit 7: Motion state<br>bit 6-0: Max accelleration since last record <br> *ex. TBD* |
-| 4 | GNSS Data Size | | TBD |
-| 5-8 | Capture Time | | TBD |
+| 4 | GNSS Data Size | uint_8 | Size of the NAV message data in bytes |
+| 5-8 | Capture Time | uint_32 | Timestamp when GNSS scan was captured (epoch seconds) |
+| 9+ | NAV Message Data | variable | Complete GNSS NAV message (up to 512 bytes) |
 
-|      |       |       |  
-| :--- | :---: | :---: | 
-| **Name** | Type / Seq>0 | GNSS Location Data |
-| **Position** | 0x3X | Bytes 2 - 19 |
-
-Description:
-| Byte Offset | Name | Data Type | Description |
-| :--: | :--  | :-------: | :---------- |
+**Note:** Manual fragmentation removed. AWS IoT Core Device Location service accepts complete GNSS NAV message data in a single payload (up to 512 bytes).
 
 
 ## Downlink Message Types

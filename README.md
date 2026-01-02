@@ -8,10 +8,17 @@ If you are interested in building the device application, please continue readin
 
 ## Project Overview
 
-This application gathers onboard sensor data as well as WIFI and GNSS signal data and sends it to AWS IoT Core using Amazon Sidewalk.  The WIFI and GNSS data is then resolved to geo coordinates using IoT Core Device Location to enable tracking of assets.
+This application gathers onboard sensor data as well as WiFi and GNSS signal data and sends it to AWS IoT Core using Amazon Sidewalk. The WiFi and GNSS data is then resolved to geo coordinates using AWS IoT Core Device Location to enable tracking of assets.
+
+**Recent Updates (Nordic SDK 3.0.0+):**
+- Updated to nRF Connect SDK v3.0.0 or later for improved location services support
+- Removed manual payload fragmentation logic - AWS IoT Core Device Location now handles larger payloads natively
+- Simplified WiFi and GNSS payload structures for better integration with AWS IoT Core Device Location
+- Increased maximum WiFi AP count from 8 to 32 for improved location accuracy
+- Enhanced GNSS payload support with larger buffer sizes (up to 512 bytes)
 
 The asset tracker device project consists of three main components:
-- the Zephyr application based on the Nordic nRF Connect SDK
+- the Zephyr application based on the Nordic nRF Connect SDK v3.0.0+
 - Adafruit UF2 USB bootloader - [bootloader/](https://github.com/aws-samples/wm1110-asset-tracker/tree/main/bootloader)
 - Sidewalk device provisioning utility - [utils/](https://github.com/aws-samples/wm1110-asset-tracker/main/dev/utils)
 
@@ -34,9 +41,9 @@ Detailed steps for programming and provisioning the device with UF2 images can b
        - [automatically](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/installation/assistant.html) (recommended)
        - [manually](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/installation/installing.html)
 
-   - STEP 2: Open terminal for the v2.5.0 SDK from the nRF Connect Toolchain Manager
+   - STEP 2: Open terminal for the v3.0.0 SDK from the nRF Connect Toolchain Manager
 
-   - STEP 3: In the terminal, enable the Sidewalk SDK and install the requirements from the root of the Nordic SDK (ex. '/opt/nordic/ncs/v2.5.0/')
+   - STEP 3: In the terminal, enable the Sidewalk SDK and install the requirements from the root of the Nordic SDK (ex. '/opt/nordic/ncs/v3.0.0/')
        ```bash
        west config manifest.group-filter "+sidewalk"
        west update
@@ -70,11 +77,11 @@ Detailed steps for programming and provisioning the device with UF2 images can b
     <summary><b>Building the application in a AWS Cloud9 environment </b></summary>
 
 - From an appropriately sized C9/EC2 instance (ex c5.xlarge) using Ubuntu 22.04, execute the following to install - 
-    - nRF Connect SDK v2.5.0 (in ~/ncs)
+    - nRF Connect SDK v3.0.0 (in ~/ncs)
     - Zephyr (in ~/ncs/zephyr)
     - west (in ~/.local/bin)
-    - Zephyr SDK v0.16.4 (in ~/zephyr-sdk-0.16.4)
-    - Sidewalk SDK v1.15.0 (in ~/ncs/sidewalk)
+    - Zephyr SDK v0.16.8 (in ~/zephyr-sdk-0.16.8)
+    - Sidewalk SDK v1.17.0 (in ~/ncs/sidewalk)
 
 **NOTE:** The build environment requires at least 20GB of storage.  For a newly created C9 env (10GB default), you will need to resize the EBS volume to 20GB or larger by following [these instructions](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html#move-environment-resize). 
 
@@ -98,7 +105,7 @@ source ~/.bashrc
 # get the nRF Connect SDK
 mkdir -p ~/ncs
 cd ~/ncs
-west init -m https://github.com/nrfconnect/sdk-nrf --mr v2.5.0
+west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.0.0
 west update
 west zephyr-export
 ```
@@ -113,11 +120,11 @@ pip3 install --user -r bootloader/mcuboot/scripts/requirements.txt
 ```bash
 # install zephyr SDK
 cd ~
-wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.4/zephyr-sdk-0.16.4_linux-x86_64.tar.xz
-wget -O - https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.4/sha256.sum | shasum --check --ignore-missing
-tar xvf zephyr-sdk-0.16.4_linux-x86_64.tar.xz
-rm zephyr-sdk-0.16.4_linux-x86_64.tar.xz
-cd ~/zephyr-sdk-0.16.4
+wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.8/zephyr-sdk-0.16.8_linux-x86_64.tar.xz
+wget -O - https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.8/sha256.sum | shasum --check --ignore-missing
+tar xvf zephyr-sdk-0.16.8_linux-x86_64.tar.xz
+rm zephyr-sdk-0.16.8_linux-x86_64.tar.xz
+cd ~/zephyr-sdk-0.16.8
 ./setup.sh
 ```
 
@@ -148,7 +155,7 @@ cp samples/wm1110-asset-tracker/SWDR006/lib*.a lib/lora_fsk/
 cd ~/ncs/sidewalk/samples/wm1110-asset-tracker
 export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
 export ZEPHYR_BASE=~/ncs/zephyr
-export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk-0.16.4
+export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk-0.16.8
 west build -b wio_tracker_1110 -- -DRADIO=LR1110 -DBOARD_ROOT=.
 ```
 
